@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedRemind — мои витамины</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #22c55e;
+      --green-dark: #16a34a;
+      --green-light: #dcfce7;
+      --red: #fca5a5;
+      --red-dark: #dc2626;
+      --yellow: #fef08a;
+      --yellow-dark: #ca8a04;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* HEADER */
+    header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .logo-icon { font-size: 24px; }
+    .header-date { font-size: 14px; color: var(--muted); }
+
+    /* LAYOUT */
+    .container { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+    /* TODAY BLOCK */
+    .today-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 0 12px;
+    }
+    .today-header h2 { font-size: 22px; font-weight: 800; }
+    .progress-pill {
+      background: var(--green-light); color: var(--green-dark);
+      padding: 4px 12px; border-radius: 50px; font-size: 13px; font-weight: 700;
+    }
+
+    /* PROGRESS BAR */
+    .progress-bar-wrap { background: var(--border); border-radius: 50px; height: 8px; margin-bottom: 20px; overflow: hidden; }
+    .progress-bar-fill { background: var(--green); height: 100%; border-radius: 50px; transition: width .4s ease; }
+
+    /* VITAMIN CARD */
+    .vitamin-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .vitamin-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 14px;
+      transition: border-color .2s, opacity .2s;
+    }
+    .vitamin-card.done {
+      border-color: var(--green);
+      background: #f0fdf4;
+    }
+    .vitamin-card.done .vitamin-name { text-decoration: line-through; opacity: .6; }
+
+    .vitamin-emoji { font-size: 28px; flex-shrink: 0; }
+
+    .vitamin-info { flex: 1; min-width: 0; }
+    .vitamin-name { font-size: 16px; font-weight: 700; }
+    .vitamin-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .vitamin-time-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--yellow); color: var(--yellow-dark);
+      padding: 2px 8px; border-radius: 50px; font-size: 12px; font-weight: 600;
+      margin-top: 4px;
+    }
+    .vitamin-time-badge.no-time { background: #f1f5f9; color: var(--muted); }
+
+    .vitamin-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .btn-take {
+      width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border);
+      background: white; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .btn-take:hover { border-color: var(--green); background: var(--green-light); }
+    .vitamin-card.done .btn-take { background: var(--green); border-color: var(--green); }
+
+    .btn-icon {
+      width: 34px; height: 34px; border-radius: 50%; border: none;
+      background: var(--bg); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; color: var(--muted); transition: background .15s;
+    }
+    .btn-icon:hover { background: var(--border); }
+    .btn-icon.delete:hover { background: #fee2e2; color: var(--red-dark); }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      background: var(--card); border-radius: var(--radius);
+      border: 1.5px dashed var(--border);
+    }
+    .empty-state .big-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { color: var(--muted); font-size: 15px; }
+
+    /* ADD BUTTON */
+    .add-btn-wrap { padding: 20px 0; }
+    .btn-add {
+      width: 100%; padding: 14px;
+      background: var(--green); color: white;
+      border: none; border-radius: var(--radius);
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background .2s;
+    }
+    .btn-add:hover { background: var(--green-dark); }
+
+    /* STREAK */
+    .streak-card {
+      background: linear-gradient(135deg, #0f172a, #1e3a5f);
+      border-radius: var(--radius); padding: 18px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; color: white;
+    }
+    .streak-label { font-size: 13px; opacity: .7; }
+    .streak-num { font-size: 28px; font-weight: 900; color: var(--green); }
+    .streak-icon { font-size: 32px; }
+
+    /* CALENDAR */
+    .section-title {
+      font-size: 18px; font-weight: 800;
+      margin: 28px 0 12px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .cal-nav { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .cal-nav-btn {
+      width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: white; font-size: 18px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; line-height: 1;
+      transition: background .15s;
+    }
+    .cal-nav-btn:hover { background: var(--green-light); border-color: var(--green); }
+    #calMonthLabel { font-size: 15px; font-weight: 700; min-width: 120px; text-align: center; }
+
+    .cal-legend {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 12px; color: var(--muted); margin-bottom: 12px;
+    }
+    .legend-dot {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px;
+    }
+    .legend-dot.full { background: var(--green); }
+    .legend-dot.partial { background: #fbbf24; }
+    .legend-dot.missed { background: #fca5a5; }
+    .legend-dot.future { background: var(--border); }
+
+    .cal-grid-wrap {
+      background: white; border-radius: var(--radius);
+      border: 1.5px solid var(--border); overflow: hidden; margin-bottom: 12px;
+    }
+    .cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      background: var(--gray-light);
+    }
+    .cal-weekdays div {
+      text-align: center; padding: 8px 0;
+      font-size: 12px; font-weight: 700; color: var(--muted);
+    }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .cal-cell {
+      aspect-ratio: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border-top: 1px solid var(--border);
+      transition: background .15s;
+      position: relative; gap: 3px;
+    }
+    .cal-cell:hover { background: var(--gray-light); }
+    .cal-cell.empty { cursor: default; }
+    .cal-cell.today .cal-num {
+      background: var(--green-dark); color: white;
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cal-cell.full { background: #f0fdf4; }
+    .cal-cell.partial { background: #fffbeb; }
+    .cal-cell.missed { background: #fff1f2; }
+    .cal-cell.future { color: var(--muted); }
+    .cal-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .cal-cell.full .cal-dot { background: var(--green); }
+    .cal-cell.partial .cal-dot { background: #f59e0b; }
+    .cal-cell.missed .cal-dot { background: var(--red-dark); }
+
+    /* DAY DETAIL */
+    .day-detail {
+      background: white; border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
+    }
+    .day-detail-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--muted); }
+    .day-detail-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .day-detail-item:last-child { border-bottom: none; }
+    .detail-status { font-size: 16px; }
+
+    /* NOTIFICATION PERMISSION */
+    .notif-banner {
+      background: #fffbeb; border: 1.5px solid #fde68a;
+      border-radius: var(--radius); padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .notif-banner p { font-size: 14px; flex: 1; }
+    .btn-allow {
+      background: var(--yellow-dark); color: white;
+      border: none; border-radius: 8px; padding: 7px 14px;
+      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 100; padding: 16px;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: white; border-radius: 20px; padding: 24px;
+      width: 100%; max-width: 480px;
+      transform: translateY(30px); transition: transform .25s ease;
+    }
+    .modal-overlay.open .modal { transform: none; }
+
+    .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color .15s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--green); }
+
+    .emoji-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+    .emoji-opt {
+      width: 42px; height: 42px; border-radius: 10px;
+      border: 2px solid var(--border); background: var(--bg);
+      font-size: 22px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: border-color .15s;
+    }
+    .emoji-opt.selected { border-color: var(--green); background: var(--green-light); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-save {
+      flex: 1; padding: 13px; background: var(--green); color: white;
+      border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .btn-cancel {
+      padding: 13px 20px; background: var(--bg); color: var(--muted);
+      border: 1.5px solid var(--border); border-radius: 10px; font-size: 16px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-icon">💊</span> MedRemind</div>
+  <div class="header-date" id="headerDate"></div>
+</header>
+
+<div class="container">
+
+  <!-- NOTIFICATION BANNER -->
+  <div class="notif-banner" id="notifBanner" style="display:none; margin-top:16px;">
+    <span style="font-size:20px">🔔</span>
+    <p>Разрешите уведомления, чтобы получать напоминания о витаминах</p>
+    <button class="btn-allow" onclick="requestNotifPermission()">Разрешить</button>
+  </div>
+
+  <!-- TODAY -->
+  <div class="today-header">
+    <h2>Сегодня</h2>
+    <div class="progress-pill" id="progressPill">0 / 0</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="vitamin-list" id="vitaminList"></div>
+
+  <div class="add-btn-wrap">
+    <button class="btn-add" onclick="openModal()">＋ Добавить витамин / лекарство</button>
+  </div>
+
+  <!-- STREAK + WEEK -->
+  <div class="streak-card">
+    <div>
+      <div class="streak-label">Серия без пропусков</div>
+      <div class="streak-num" id="streakNum">0 дней</div>
+    </div>
+    <div class="streak-icon">🔥</div>
+  </div>
+
+  <div class="section-title">
+    📅 Календарь месяца
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <span id="calMonthLabel"></span>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="cal-legend">
+    <span class="legend-dot full"></span>Все приняты
+    <span class="legend-dot partial"></span>Частично
+    <span class="legend-dot missed"></span>Пропущено
+    <span class="legend-dot future"></span>Впереди
+  </div>
+
+  <div class="cal-grid-wrap">
+    <div class="cal-weekdays">
+      <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- DAY DETAIL -->
+  <div class="day-detail" id="dayDetail" style="display:none"></div>
+
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="modal" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <h3 id="modalTitle">Новый витамин</h3>
+
+    <div class="form-group">
+      <label>Иконка</label>
+      <div class="emoji-picker" id="emojiPicker">
+        <div class="emoji-opt selected" data-emoji="💊" onclick="selectEmoji(this)">💊</div>
+        <div class="emoji-opt" data-emoji="🫀" onclick="selectEmoji(this)">🫀</div>
+        <div class="emoji-opt" data-emoji="🧴" onclick="selectEmoji(this)">🧴</div>
+        <div class="emoji-opt" data-emoji="🌿" onclick="selectEmoji(this)">🌿</div>
+        <div class="emoji-opt" data-emoji="🐟" onclick="selectEmoji(this)">🐟</div>
+        <div class="emoji-opt" data-emoji="☀️" onclick="selectEmoji(this)">☀️</div>
+        <div class="emoji-opt" data-emoji="🫐" onclick="selectEmoji(this)">🫐</div>
+        <div class="emoji-opt" data-emoji="💉" onclick="selectEmoji(this)">💉</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Название</label>
+      <input type="text" id="inputName" placeholder="Например: Омега-3, Магний B6..." />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Доза</label>
+        <input type="text" id="inputDose" placeholder="500 мг" />
+      </div>
+      <div class="form-group">
+        <label>Время приёма</label>
+        <input type="time" id="inputTime" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Частота</label>
+      <select id="inputFreq">
+        <option value="daily">Каждый день</option>
+        <option value="alt">Через день</option>
+        <option value="mon-fri">Пн – Пт</option>
+        <option value="weekends">Сб – Вс</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-save" onclick="saveVitamin()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  let vitamins = JSON.parse(localStorage.getItem('vitamins') || '[]');
+  let log = JSON.parse(localStorage.getItem('log') || '{}');    // { 'YYYY-MM-DD': { id: bool } }
+  let editingId = null;
+  let selectedEmoji = '💊';
+  let notifTimers = [];
+
+  const TODAY = todayKey();
+  let calYear = new Date().getFullYear();
+  let calMonth = new Date().getMonth();
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', { weekday:'long', day:'numeric', month:'long' });
+
+  if (!log[TODAY]) log[TODAY] = {};
+
+  render();
+  checkNotifPermission();
+  scheduleAllNotifications();
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function todayKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function save() {
+    localStorage.setItem('vitamins', JSON.stringify(vitamins));
+    localStorage.setItem('log', JSON.stringify(log));
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  function isDueToday(v) {
+    const d = new Date().getDay(); // 0=Sun
+    if (v.freq === 'daily') return true;
+    if (v.freq === 'alt') {
+      const dayNum = Math.floor(Date.now() / 86400000);
+      return dayNum % 2 === 0;
+    }
+    if (v.freq === 'mon-fri') return d >= 1 && d <= 5;
+    if (v.freq === 'weekends') return d === 0 || d === 6;
+    return true;
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  function render() {
+    renderList();
+    renderProgress();
+    renderStreak();
+    renderCalendar();
+  }
+
+  function renderList() {
+    const el = document.getElementById('vitaminList');
+    const due = vitamins.filter(isDueToday);
+
+    if (due.length === 0) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="big-icon">🌱</div>
+        <p>Пока нет витаминов на сегодня.<br>Нажми «+» чтобы добавить первый!</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = due.map(v => {
+      const done = !!log[TODAY]?.[v.id];
+      return `<div class="vitamin-card ${done ? 'done' : ''}" id="card-${v.id}">
+        <div class="vitamin-emoji">${v.emoji}</div>
+        <div class="vitamin-info">
+          <div class="vitamin-name">${v.name}</div>
+          <div class="vitamin-meta">${v.dose || ''}</div>
+          ${v.time
+            ? `<div class="vitamin-time-badge">⏰ ${v.time}</div>`
+            : `<div class="vitamin-time-badge no-time">Без времени</div>`}
+        </div>
+        <div class="vitamin-actions">
+          <button class="btn-icon" onclick="openEditModal('${v.id}')" title="Редактировать">✏️</button>
+          <button class="btn-icon delete" onclick="deleteVitamin('${v.id}')" title="Удалить">🗑️</button>
+          <button class="btn-take" onclick="toggleTaken('${v.id}')" title="${done ? 'Отменить' : 'Отметить принятым'}">
+            ${done ? '✅' : '○'}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderProgress() {
+    const due = vitamins.filter(isDueToday);
+    const done = due.filter(v => log[TODAY]?.[v.id]).length;
+    const total = due.length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+
+    document.getElementById('progressPill').textContent = `${done} / ${total}`;
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+
+  function renderStreak() {
+    let streak = 0;
+    const d = new Date();
+    d.setDate(d.getDate() - 1); // start from yesterday
+    for (let i = 0; i < 365; i++) {
+      const key = d.toISOString().slice(0, 10);
+      const dayLog = log[key] || {};
+      const dayVits = vitamins.filter(v => isDueThatDay(v, d));
+      if (dayVits.length === 0) { d.setDate(d.getDate() - 1); continue; }
+      const allDone = dayVits.every(v => dayLog[v.id]);
+      if (!allDone) break;
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    // check today
+    const todayDue = vitamins.filter(isDueToday);
+    const todayDone = todayDue.length > 0 && todayDue.every(v => log[TODAY]?.[v.id]);
+    if (todayDone) streak++;
+
+    document.getElementById('streakNum').textContent = streak + (streak === 1 ? ' день' : streak < 5 ? ' дня' : ' дней');
+  }
+
+  function isDueThatDay(v, dateObj) {
+    const d = dateObj.getDay();
+    if (v.freq === 'daily') return true;
+    if (v.freq === 'alt') { const n = Math.floor(dateObj.getTime()/86400000); return n%2===0; }
+    if (v.freq === 'mon-fri') return d>=1 && d<=5;
+    if (v.freq === 'weekends') return d===0 || d===6;
+    return true;
+  }
+
+  function changeMonth(delta) {
+    calMonth += delta;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    renderCalendar();
+    document.getElementById('dayDetail').style.display = 'none';
+  }
+
+  function renderCalendar() {
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                        'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    document.getElementById('calMonthLabel').textContent = monthNames[calMonth] + ' ' + calYear;
+
+    const firstDay = new Date(calYear, calMonth, 1);
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    // Monday-based offset (0=Mon … 6=Sun)
+    let offset = firstDay.getDay() - 1;
+    if (offset < 0) offset = 6;
+
+    let html = '';
+    // empty cells before month start
+    for (let i = 0; i < offset; i++) html += `<div class="cal-cell empty"></div>`;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(calYear, calMonth, day);
+      const key = d.toISOString().slice(0, 10);
+      const isToday = key === TODAY;
+      const isFuture = key > TODAY;
+
+      let cls = 'future';
+      if (!isFuture) {
+        const dayLog = log[key] || {};
+        const dayVits = vitamins.filter(v => isDueThatDay(v, d));
+        if (dayVits.length > 0) {
+          const done = dayVits.filter(v => dayLog[v.id]).length;
+          if (done === dayVits.length) cls = 'full';
+          else if (done > 0) cls = 'partial';
+          else if (!isToday) cls = 'missed';
+        }
+      }
+
+      const dot = (cls !== 'future') ? `<div class="cal-dot"></div>` : '';
+      html += `<div class="cal-cell ${cls} ${isToday ? 'today' : ''}" onclick="showDayDetail('${key}', ${day})">
+        <div class="cal-num">${day}</div>
+        ${dot}
+      </div>`;
+    }
+
+    document.getElementById('calGrid').innerHTML = html;
+  }
+
+  function showDayDetail(key, day) {
+    const el = document.getElementById('dayDetail');
+    const d = new Date(key);
+    const dayVits = vitamins.filter(v => isDueThatDay(v, d));
+    const dayLog = log[key] || {};
+    const isFuture = key > TODAY;
+
+    if (dayVits.length === 0) { el.style.display = 'none'; return; }
+
+    const label = d.toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
+    const items = dayVits.map(v => {
+      const done = !!dayLog[v.id];
+      let status, color;
+      if (isFuture) { status = '⏳'; color = 'var(--muted)'; }
+      else if (done) { status = '✅'; color = 'var(--green-dark)'; }
+      else { status = '❌'; color = 'var(--red-dark)'; }
+      return `<div class="day-detail-item">
+        <span style="font-size:20px">${v.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:700">${v.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${v.dose || ''}${v.time ? ' · ' + v.time : ''}</div>
+        </div>
+        <span class="detail-status">${status}</span>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="day-detail-title">${label}</div>${items}`;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── ACTIONS ────────────────────────────────────────────────────────────────
+  function toggleTaken(id) {
+    if (!log[TODAY]) log[TODAY] = {};
+    log[TODAY][id] = !log[TODAY][id];
+    save();
+    render();
+  }
+
+  function deleteVitamin(id) {
+    if (!confirm('Удалить этот витамин?')) return;
+    vitamins = vitamins.filter(v => v.id !== id);
+    save();
+    scheduleAllNotifications();
+    render();
+  }
+
+  // ── MODAL ──────────────────────────────────────────────────────────────────
+  function openModal() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Новый витамин';
+    document.getElementById('inputName').value = '';
+    document.getElementById('inputDose').value = '';
+    document.getElementById('inputTime').value = '';
+    document.getElementById('inputFreq').value = 'daily';
+    selectEmojiByValue('💊');
+    document.getElementById('modal').classList.add('open');
+    setTimeout(() => document.getElementById('inputName').focus(), 250);
+  }
+
+  function openEditModal(id) {
+    const v = vitamins.find(x => x.id === id);
+    if (!v) return;
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Редактировать';
+    document.getElementById('inputName').value = v.name;
+    document.getElementById('inputDose').value = v.dose || '';
+    document.getElementById('inputTime').value = v.time || '';
+    document.getElementById('inputFreq').value = v.freq || 'daily';
+    selectEmojiByValue(v.emoji || '💊');
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  function onOverlayClick(e) {
+    if (e.target === document.getElementById('modal')) closeModal();
+  }
+
+  function selectEmoji(el) {
+    document.querySelectorAll('.emoji-opt').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedEmoji = el.dataset.emoji;
+  }
+
+  function selectEmojiByValue(val) {
+    document.querySelectorAll('.emoji-opt').forEach(e => {
+      e.classList.toggle('selected', e.dataset.emoji === val);
+    });
+    selectedEmoji = val;
+  }
+
+  function saveVitamin() {
+    const name = document.getElementById('inputName').value.trim();
+    if (!name) { document.getElementById('inputName').focus(); return; }
+
+    const v = {
+      id: editingId || uid(),
+      name,
+      dose: document.getElementById('inputDose').value.trim(),
+      time: document.getElementById('inputTime').value,
+      freq: document.getElementById('inputFreq').value,
+      emoji: selectedEmoji,
+    };
+
+    if (editingId) {
+      vitamins = vitamins.map(x => x.id === editingId ? v : x);
+    } else {
+      vitamins.push(v);
+      if (!log[TODAY]) log[TODAY] = {};
+    }
+
+    save();
+    closeModal();
+    scheduleAllNotifications();
+    render();
+  }
+
+  // keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) {
+      if (document.activeElement.tagName !== 'BUTTON') saveVitamin();
+    }
+  });
+
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  function checkNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      document.getElementById('notifBanner').style.display = 'flex';
+    }
+  }
+
+  function requestNotifPermission() {
+    Notification.requestPermission().then(p => {
+      document.getElementById('notifBanner').style.display = 'none';
+      if (p === 'granted') scheduleAllNotifications();
+    });
+  }
+
+  function scheduleAllNotifications() {
+    notifTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
+    notifTimers = [];
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    // ── точные напоминания по времени ─────────────────────────────────────────
+    const now = new Date();
+    vitamins.filter(isDueToday).forEach(v => {
+      if (!v.time) return;
+      if (log[TODAY]?.[v.id]) return;
+
+      const [h, m] = v.time.split(':').map(Number);
+      const target = new Date();
+      target.setHours(h, m, 0, 0);
+      const diff = target - now;
+      if (diff <= 0) return;
+
+      const t = setTimeout(() => {
+        if (log[TODAY]?.[v.id]) return;
+        const n = new Notification('Время принять витамин 💊', {
+          body: `${v.emoji} ${v.name}${v.dose ? ' · ' + v.dose : ''}`,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💊</text></svg>',
+          requireInteraction: true,
+          tag: v.id,
+        });
+        n.onclick = () => { window.focus(); n.close(); };
+
+        setTimeout(() => {
+          if (!log[TODAY]?.[v.id]) {
+            new Notification('Напоминание: не забудь витамин ⏰', {
+              body: `${v.emoji} ${v.name} — ещё не отмечено как принятое`,
+              tag: v.id + '-reminder',
+            });
+          }
+        }, 15 * 60 * 1000);
+      }, diff);
+
+      notifTimers.push(t);
+    });
+
+    // ── ежечасное напоминание о непринятых ────────────────────────────────────
+    // первый тик — в начале следующего часа
+    const msToNextHour = (60 - now.getMinutes()) * 60000 - now.getSeconds() * 1000;
+    const hourlyTick = () => {
+      const untaken = vitamins.filter(v => isDueToday(v) && !log[TODAY]?.[v.id]);
+      if (untaken.length === 0) return;
+      const names = untaken.map(v => `${v.emoji} ${v.name}`).join(', ');
+      new Notification('Не забудь про витамины 💊', {
+        body: `Ещё не принято: ${names}`,
+        tag: 'hourly-reminder',
+      });
+    };
+
+    const firstTick = setTimeout(() => {
+      hourlyTick();
+      const interval = setInterval(hourlyTick, 60 * 60 * 1000);
+      notifTimers.push(interval);
+    }, msToNextHour);
+    notifTimers.push(firstTick);
+  }
+</script>
+</body>
+</html>
